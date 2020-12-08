@@ -44,21 +44,21 @@ class LEEPScheduler(Scheduler):
         return sum(batch_counts)
 
     def leep(self, model, main_dataloader, main_num_labels, aux_task):
-        uid = dataloader.uid
+        uid = main_dataloader.uid
         aux_num_labels = model.module_pool[f'{aux_task}_pred_head'].out_features
         task_to_label_dict = {aux_task: 'labels'}
-        empirical_joint = np.zeros(main_num_labels, aux_num_labels) # hat_P(y,z)
+        empirical_joint = np.zeros((main_num_labels, aux_num_labels)) # hat_P(y,z)
         z_probs = []
         y_labels = []
         for batch_num, bdict in enumerate(main_dataloader):
             X_bdict, Y_bdict = bdict
             batch_size = len(X_bdict['data'])
-            batch_joint = np.zeros(main_num_labels, aux_num_labels)
+            batch_joint = np.zeros((main_num_labels, aux_num_labels))
             (
                 uid_bdict, loss_bdict, prob_bdict, gold_bdict
             ) = model.forward(X_bdict[uid], X_bdict, Y_bdict, task_to_label_dict,
                               return_action_outputs=False)
-            for i, ylabel in enumerate(gold_bdict[aux_task]):
+            for i, y_label in enumerate(gold_bdict[aux_task]):
                 z_prob = prob_bdict[aux_task][i]
                 batch_joint[y_label, :] += z_prob
             batch_joint /= batch_size # normalize for batch
@@ -109,7 +109,7 @@ class LEEPScheduler(Scheduler):
             leeps.append(self.leep(model, main_dataloader, main_num_labels, task))
         
         order_idxs = np.argsort(leeps)[::-1] # in descending order
-        self.order = [tasks[idx] for idx in order_idxs if tasks[idxs] != main_task]
+        self.order = [tasks[idx] for idx in order_idxs if tasks[idx] != main_task]
         self.order += [main_task]
 
         if is_training:
@@ -162,7 +162,7 @@ class LEEPScheduler(Scheduler):
         data_loaders = [iter(dataloader) for dataloader in dataloaders]
 
         # set task order, if it doesn't exist then generate it
-        task_names = [d.keys()[0] for d in task_to_label_dicts]
+        task_names = [list(d.keys())[0] for d in task_to_label_dicts]
         if self.order is None:
             main_task_idx = [i for i, tn in enumerate(task_names) if tn == main_task][0]
             self.update_order(main_task, model, dataloaders[main_task_idx])

@@ -341,10 +341,10 @@ class EmmentalLearner(object):
         valid_dataloaders = [
             dataloader for dataloader in dataloaders if dataloader.split in valid_split
         ]
-        if isinstance(self.task_scheduler, LEEPScheduler):
+        if isinstance(self.task_scheduler, LEEPScheduler) and len(valid_dataloaders) > 0:
             # update LEEP scheduler task ordering as well!
             main_valid_dl = [dl for dl in valid_dataloaders
-                             if dl.task_to_label_dict.keys()[0] == self.main_task][0]
+                             if list(dl.task_to_label_dict.keys())[0] == self.main_task][0]
             self.task_scheduler.update_order(self.main_task,
                                              model,
                                              main_valid_dl)
