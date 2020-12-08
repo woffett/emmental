@@ -18,7 +18,7 @@ from emmental.data import EmmentalDataLoader
 from emmental.logging import LoggingManager
 from emmental.model import EmmentalModel
 from emmental.optimizers.bert_adam import BertAdam
-from emmental.schedulers import SCHEDULERS
+from emmental.schedulers import SCHEDULERS, LEEPScheduler
 from emmental.schedulers.scheduler import Scheduler
 from emmental.utils.utils import construct_identifier, prob_to_pred
 
@@ -42,9 +42,10 @@ class EmmentalLearner(object):
       name: Name of the learner, defaults to None.
     """
 
-    def __init__(self, name: Optional[str] = None) -> None:
+    def __init__(self, name: Optional[str] = None, main_task: Optional[str] = None) -> None:
         """Initialize EmmentalLearner."""
         self.name = name if name is not None else type(self).__name__
+        self.main_task = main_task
 
     def _set_logging_manager(self) -> None:
         """Set logging manager."""
@@ -305,7 +306,7 @@ class EmmentalLearner(object):
         """Set task scheduler for learning process."""
         opt = Meta.config["learner_config"]["task_scheduler_config"]["task_scheduler"]
 
-        if opt in ["sequential", "round_robin", "mixed"]:
+        if opt in ["sequential", "round_robin", "mixed", "leep"]:
             self.task_scheduler = SCHEDULERS[opt](  # type: ignore
                 **Meta.config["learner_config"]["task_scheduler_config"][
                     f"{opt}_scheduler_config"
@@ -340,6 +341,13 @@ class EmmentalLearner(object):
         valid_dataloaders = [
             dataloader for dataloader in dataloaders if dataloader.split in valid_split
         ]
+        if isinstance(self.task_scheduler, LEEPScheduler):
+            # update LEEP scheduler task ordering as well!
+            main_valid_dl = [dl for dl in valid_dataloaders
+                             if dl.task_to_label_dict.keys()[0] == self.main_task][0]
+            self.task_scheduler.update_order(self.main_task,
+                                             model,
+                                             main_valid_dl)
         return model.score(valid_dataloaders)
 
     def _logging(
@@ -571,8 +579,11 @@ class EmmentalLearner(object):
         self.optimizer.zero_grad()
 
         for epoch_num in range(Meta.config["learner_config"]["n_epochs"]):
+            scheduler_args = [train_dataloaders, model]
+            if self.main_task is not None:
+                scheduler_args.append(self.main_task)
             batches = tqdm(
-                enumerate(self.task_scheduler.get_batches(train_dataloaders, model)),
+                enumerate(self.task_scheduler.get_batches(*scheduler_args)),
                 total=self.n_batches_per_epoch,
                 disable=(
                     not Meta.config["meta_config"]["verbose"]
