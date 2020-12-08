@@ -12,6 +12,7 @@ from emmental.metrics.precision import precision_scorer
 from emmental.metrics.recall import recall_scorer
 from emmental.metrics.roc_auc import roc_auc_scorer
 from emmental.metrics.spearman_correlation import spearman_correlation_scorer
+from emmental.metrics.avg_prec import avg_prec_scorer
 
 METRICS = {
     "accuracy": accuracy_scorer,
@@ -26,6 +27,7 @@ METRICS = {
     "pearson_spearman": pearson_spearman_scorer,
     "spearman_correlation": spearman_correlation_scorer,
     "roc_auc": roc_auc_scorer,
+    "avg_prec": avg_prec_scorer
 }
 
 __all__ = [
@@ -41,4 +43,5 @@ __all__ = [
     "recall_scorer",
     "roc_auc_scorer",
     "spearman_correlation_scorer",
+    "avg_prec_scorer",
 ]
