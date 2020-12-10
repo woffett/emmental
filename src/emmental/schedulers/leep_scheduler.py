@@ -76,7 +76,7 @@ class LEEPScheduler(Scheduler):
         for i, ylabel in enumerate(y_labels):
             zprob = z_probs[i]
             cond_prob = conditional[ylabel, :]
-            leep += np.log(np.sum(cond_prob * z_prob))
+            leep += np.log(np.sum(cond_prob * zprob))
         leep /= len(y_labels)
         return leep
 
